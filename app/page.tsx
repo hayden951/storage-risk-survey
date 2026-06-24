@@ -68,7 +68,7 @@ function getCatRisk(score: number, max: number) {
 const catKeys = Object.keys(CATEGORIES);
 
 function getCatIndex(category: string) {
-  return catKeys.findIndex(k => CATEGORIES[k] === category);
+  return catKeys.findIndex(k => (CATEGORIES as any)[k] === category);
 }
 
 const ScoringHeader = () => (
@@ -133,7 +133,7 @@ export default function Survey() {
 
   if (done) {
     const totals = { flash: 0, vendor: 0, supply: 0, cloud: 0, ai: 0 };
-    answers.forEach((ai, qi) => { totals[questions[qi].key] += questions[qi].answers[ai].s; });
+    answers.forEach((ai, qi) => { (totals as any)[questions[qi].key] += questions[qi].answers[ai].s; });
     const totalScore = Object.values(totals).reduce((a, b) => a + b, 0);
     const overall = getOverallRisk(totalScore);
 
@@ -163,7 +163,7 @@ export default function Survey() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 16px" }}>Score by Category</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {catKeys.map((key, i) => {
+              {(catKeys as string[]).map((key: string, i: number) => {
                 const name = CATEGORIES[key];
                 const catQs = questions.filter(q => q.key === key);
                 const catMax = catQs.length * 4;
@@ -223,12 +223,12 @@ export default function Survey() {
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 20px" }}>Your Answers</p>
             {catKeys.map((key) => {
               const name = CATEGORIES[key];
-              const catQs = questions.map((q, i) => ({ q, i })).filter(({ q }) => q.key === key);
+              const catQs = questions.map((q: any, i: number) => ({ q, i })).filter(({ q }: any) => q.key === key);
               return (
                 <div key={key} style={{ marginBottom: 24 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px", paddingBottom: 6, borderBottom: "1px solid #f3f4f6" }}>{name}</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {catQs.map(({ q, i }) => {
+                    {catQs.map(({ q, i }: any) => {
                       const chosen = q.answers[answers[i]];
                       const s = chosen.s;
                       const sc = s === 1 ? "#16a34a" : s === 2 ? "#ca8a04" : s === 3 ? "#ea580c" : "#dc2626";
