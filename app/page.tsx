@@ -59,7 +59,7 @@ function getOverallRisk(score) {
   return THRESHOLDS.find(t => score >= t.lo && score <= t.hi) || THRESHOLDS[THRESHOLDS.length - 1];
 }
 
-function getCatRisk(score, max) {
+function getCatRisk(score: number, max: number) {
   const pct = score / max;
   if (pct <= 0.33) return { label: "Low Risk",    color: "#14532d", bg: "#dcfce7", border: "#16a34a" };
   if (pct <= 0.66) return { label: "Medium Risk", color: "#713f12", bg: "#fef9c3", border: "#ca8a04" };
