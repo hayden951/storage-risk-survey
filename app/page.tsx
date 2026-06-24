@@ -1,7 +1,33 @@
 "use client";
 import { useState } from "react";
 
-const CATEGORIES: Record<string, string> = {
+type CategoryKey = "flash" | "vendor" | "supply" | "cloud" | "ai";
+
+interface Answer {
+  label: string;
+  s: number;
+}
+
+interface Question {
+  category: string;
+  text: string;
+  answers: Answer[];
+  key: CategoryKey;
+}
+
+interface Threshold {
+  lo: number;
+  hi: number;
+  label: string;
+  emoji: string;
+  color: string;
+  bg: string;
+  border: string;
+  desc: string;
+  remediate: string;
+}
+
+const CATEGORIES: Record<CategoryKey, string> = {
   flash:  "Flash Dependency & Architecture",
   vendor: "Vendor & Hardware Concentration",
   supply: "Procurement & Supply Chain Exposure",
@@ -9,7 +35,7 @@ const CATEGORIES: Record<string, string> = {
   ai:     "AI & Growth Trajectory",
 };
 
-const CAT_SUBTITLES = {
+const CAT_SUBTITLES: Record<CategoryKey, string> = {
   flash:  "How reliant is your environment on NVMe/flash?",
   vendor: "How exposed are you to a single vendor or platform?",
   supply: "How vulnerable is your buying cycle to market volatility?",
@@ -17,7 +43,7 @@ const CAT_SUBTITLES = {
   ai:     "Is your data growth compounding your flash exposure?",
 };
 
-const questions = [
+const questions: Question[] = [
   { category: "Flash Dependency & Architecture", text: "What percentage of your storage environment is all-flash NVMe?", answers: [{ label: "<25%", s: 1 }, { label: "25-50%", s: 2 }, { label: "50-75%", s: 3 }, { label: ">75%", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Do you have a mix of disk, hybrid, and flash tiers in production?", answers: [{ label: "All three", s: 1 }, { label: "Two tiers", s: 2 }, { label: "One + partial", s: 3 }, { label: "All-flash only", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Is your storage platform designed to run on mixed media (HDD + NVMe)?", answers: [{ label: "Yes, natively", s: 1 }, { label: "Partially", s: 2 }, { label: "Via workaround", s: 3 }, { label: "No", s: 4 }], key: "flash" },
@@ -40,21 +66,16 @@ const questions = [
   { category: "AI & Growth Trajectory", text: "Does your AI/ML infrastructure require NVMe for checkpointing, vector DBs, or inference staging?", answers: [{ label: "No", s: 1 }, { label: "Some", s: 2 }, { label: "Mostly", s: 3 }, { label: "All of it", s: 4 }], key: "ai" },
 ];
 
-const THRESHOLDS = [
+const THRESHOLDS: Threshold[] = [
   { lo: 20, hi: 34, label: "Low Risk",      emoji: "🟢", color: "#14532d", bg: "#dcfce7", border: "#16a34a", desc: "Strong architectural flexibility, multi-vendor, cloud-ready. Monitor the market but no urgent action needed.", remediate: "12+ months runway — no urgent action needed." },
-  { lo: 35, hi: 49, label: "Moderate Risk", emoji: "🟡", color: "#713f12", bg: "#fef9c3", border: "#ca8a04", desc: "Some exposure to flash dependency or vendor concentration. Begin evaluating tiered architecture and cloud optionality.", remediate: "6–12 months — begin planning architectural changes now." },
-  { lo: 50, hi: 62, label: "High Risk",     emoji: "🟠", color: "#7c2d12", bg: "#ffedd5", border: "#ea580c", desc: "Meaningful vulnerability to supply disruption. Prioritize architectural review, procurement strategy, and cloud bursting capabilities.", remediate: "3–6 months — prioritize remediation this quarter." },
-  { lo: 63, hi: 80, label: "Critical Risk", emoji: "🔴", color: "#7f1d1d", bg: "#fee2e2", border: "#dc2626", desc: "Highly exposed. Flash-heavy, single-vendor, no cloud escape valve. Supply chain disruption could stall projects or trigger emergency spending.", remediate: "Act now — immediate architectural and procurement action required." },
+  { lo: 35, hi: 49, label: "Moderate Risk", emoji: "🟡", color: "#713f12", bg: "#fef9c3", border: "#ca8a04", desc: "Some exposure to flash dependency or vendor concentration. Begin evaluating tiered architecture and cloud optionality.", remediate: "6-12 months — begin planning architectural changes now." },
+  { lo: 50, hi: 62, label: "High Risk",     emoji: "🟠", color: "#7c2d12", bg: "#ffedd5", border: "#ea580c", desc: "Meaningful vulnerability to supply disruption. Prioritize architectural review, procurement strategy, and cloud bursting.", remediate: "3-6 months — prioritize remediation this quarter." },
+  { lo: 63, hi: 80, label: "Critical Risk", emoji: "🔴", color: "#7f1d1d", bg: "#fee2e2", border: "#dc2626", desc: "Highly exposed. Flash-heavy, single-vendor, no cloud escape valve. Supply chain disruption could stall projects or trigger emergency spending.", remediate: "Act now — immediate action required." },
 ];
 
-const TIPS = [
-  { icon: "🏗️", text: 'Weight Categories 1 & 2 heavily in your narrative — architectural lock-in is the hardest problem to solve quickly.' },
-  { icon: "☁️", text: 'Category 4 (Cloud Optionality) is the fastest lever most organizations can pull, so it\'s worth calling out separately even for moderate-risk scores.' },
-  { icon: "⏱️", text: 'Consider adding a "time to remediate" dimension for each risk level — e.g., Low Risk = 12+ months runway, Critical Risk = act now.' },
-  { icon: "💬", text: 'For a webinar or sales context, frame scores as conversation starters: "If you scored above 50, let\'s talk about what that looks like in your environment."' },
-];
+const catKeys = Object.keys(CATEGORIES) as CategoryKey[];
 
-function getOverallRisk(score: number) {
+function getOverallRisk(score: number): Threshold {
   return THRESHOLDS.find(t => score >= t.lo && score <= t.hi) || THRESHOLDS[THRESHOLDS.length - 1];
 }
 
@@ -65,10 +86,12 @@ function getCatRisk(score: number, max: number) {
   return                  { label: "High Risk",   color: "#7f1d1d", bg: "#fee2e2", border: "#dc2626" };
 }
 
-const catKeys = Object.keys(CATEGORIES);
+function getCatIndex(category: string): number {
+  return catKeys.findIndex(k => CATEGORIES[k] === category);
+}
 
-function getCatIndex(category: string) {
-  return catKeys.findIndex(k => (CATEGORIES as any)[k] === category);
+function downloadPDF(): void {
+  window.print();
 }
 
 const ScoringHeader = () => (
@@ -86,7 +109,7 @@ const ScoringHeader = () => (
       </div>
     </div>
     <div style={{ display: "flex", gap: 20, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-      {[["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]].map(([val, lbl]) => (
+      {(["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]) && [["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]].map(([val, lbl]) => (
         <div key={lbl} style={{ textAlign: "center" }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: "#111" }}>{val}</div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{lbl}</div>
@@ -96,11 +119,7 @@ const ScoringHeader = () => (
   </div>
 );
 
-function downloadPDF(): void {
-  window.print();
-}
-
-export default function Survey() {
+export default function Page() {
   const [currentQ, setCurrentQ] = useState<number>(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -114,26 +133,19 @@ export default function Survey() {
   function handleNext() {
     if (selected === null) return;
     const newAnswers = [...answers, selected];
-    if (isLast) {
-      setAnswers(newAnswers);
-      setDone(true);
-    } else {
-      setAnswers(newAnswers);
-      setCurrentQ(currentQ + 1);
-      setSelected(null);
-    }
+    if (isLast) { setAnswers(newAnswers); setDone(true); }
+    else { setAnswers(newAnswers); setCurrentQ(currentQ + 1); setSelected(null); }
   }
 
   function handleRestart() {
-    setCurrentQ(0);
-    setAnswers([]);
-    setSelected(null);
-    setDone(false);
+    setCurrentQ(0); setAnswers([]); setSelected(null); setDone(false);
   }
 
   if (done) {
-    const totals = { flash: 0, vendor: 0, supply: 0, cloud: 0, ai: 0 };
-    answers.forEach((ai, qi) => { (totals as any)[questions[qi].key] += questions[qi].answers[ai].s; });
+    const totals: Record<CategoryKey, number> = { flash: 0, vendor: 0, supply: 0, cloud: 0, ai: 0 };
+    answers.forEach((ai: number, qi: number) => {
+      totals[questions[qi].key] += questions[qi].answers[ai].s;
+    });
     const totalScore = Object.values(totals).reduce((a, b) => a + b, 0);
     const overall = getOverallRisk(totalScore);
 
@@ -143,9 +155,9 @@ export default function Survey() {
           <ScoringHeader />
 
           {totalScore > 50 && (
-            <div style={{ background: "#111", borderRadius: 12, padding: 24, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 6px" }}>💬 Let's talk about your score</p>
-              <p style={{ fontSize: 13, color: "#d1d5db", margin: 0, lineHeight: 1.7 }}>You scored <strong style={{ color: "#fff" }}>{totalScore} out of 80</strong>. Organizations at this level often face real constraints when hardware availability shifts. This is a great conversation starter — let's walk through what this looks like in your environment.</p>
+            <div style={{ background: "#111", borderRadius: 12, padding: 24, marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 6px" }}>💬 Let&apos;s talk about your score</p>
+              <p style={{ fontSize: 13, color: "#d1d5db", margin: 0, lineHeight: 1.7 }}>You scored <strong style={{ color: "#fff" }}>{totalScore} out of 80</strong>. Organizations at this level often face real constraints when hardware availability shifts. This is a great conversation starter — let&apos;s walk through what this looks like in your environment.</p>
             </div>
           )}
 
@@ -163,10 +175,9 @@ export default function Survey() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 16px" }}>Score by Category</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {(catKeys as string[]).map((key: string, i: number) => {
+              {catKeys.map((key: CategoryKey, i: number) => {
                 const name = CATEGORIES[key];
-                const catQs = questions.filter(q => q.key === key);
-                const catMax = catQs.length * 4;
+                const catMax = questions.filter((q: Question) => q.key === key).length * 4;
                 const score = totals[key];
                 const risk = getCatRisk(score, catMax);
                 const isPriority = key === "flash" || key === "vendor";
@@ -201,7 +212,7 @@ export default function Survey() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 16px" }}>Risk Score Thresholds</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {THRESHOLDS.map(t => {
+              {THRESHOLDS.map((t: Threshold) => {
                 const active = totalScore >= t.lo && totalScore <= t.hi;
                 return (
                   <div key={t.lo} style={{ borderRadius: 8, border: `1px solid ${active ? t.border : "#f3f4f6"}`, background: active ? t.bg : "#fafafa", padding: "12px 16px", opacity: active ? 1 : 0.5 }}>
@@ -218,17 +229,16 @@ export default function Survey() {
             </div>
           </div>
 
-          {/* Answers summary */}
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 20px" }}>Your Answers</p>
-            {catKeys.map((key) => {
+            {catKeys.map((key: CategoryKey) => {
               const name = CATEGORIES[key];
-              const catQs = questions.map((q: any, i: number) => ({ q, i })).filter(({ q }: any) => q.key === key);
+              const catQs = questions.map((q: Question, i: number) => ({ q, i })).filter(({ q }: { q: Question; i: number }) => q.key === key);
               return (
                 <div key={key} style={{ marginBottom: 24 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px", paddingBottom: 6, borderBottom: "1px solid #f3f4f6" }}>{name}</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {catQs.map(({ q, i }: any) => {
+                    {catQs.map(({ q, i }: { q: Question; i: number }) => {
                       const chosen = q.answers[answers[i]];
                       const s = chosen.s;
                       const sc = s === 1 ? "#16a34a" : s === 2 ? "#ca8a04" : s === 3 ? "#ea580c" : "#dc2626";
@@ -272,7 +282,6 @@ export default function Survey() {
           <p style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 4px" }}>Category {catIdx + 1} of {catKeys.length}</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: "0 0 4px" }}>{q.category}</p>
           {CAT_SUBTITLES[q.key] && <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>{CAT_SUBTITLES[q.key]}</p>}
-          {!CAT_SUBTITLES[q.key] && <div style={{ marginBottom: 16 }} />}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Question {currentQ + 1} of {questions.length}</p>
             <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>{Math.round(progress)}%</p>
@@ -282,7 +291,7 @@ export default function Survey() {
           </div>
           <h2 style={{ fontSize: 17, fontWeight: 600, color: "#111", marginBottom: 20, lineHeight: 1.4 }}>{q.text}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-            {q.answers.map((answer, i) => (
+            {q.answers.map((answer: Answer, i: number) => (
               <button key={i} onClick={() => setSelected(i)} style={{ padding: "13px 16px", borderRadius: 8, border: selected === i ? "2px solid #111" : "1.5px solid #e5e7eb", background: selected === i ? "#f9fafb" : "#fff", textAlign: "left", fontSize: 14, cursor: "pointer", color: selected === i ? "#111" : "#374151", fontWeight: selected === i ? 500 : 400, transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: selected === i ? "#111" : "#9ca3af", background: selected === i ? "#e5e7eb" : "#f3f4f6", borderRadius: 4, padding: "2px 7px", flexShrink: 0 }}>{i + 1}</span>
                 {answer.label}
