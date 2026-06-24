@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-const CATEGORIES = {
+const CATEGORIES: Record<string, string> = {
   flash:  "Flash Dependency & Architecture",
   vendor: "Vendor & Hardware Concentration",
   supply: "Procurement & Supply Chain Exposure",
