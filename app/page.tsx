@@ -27,7 +27,14 @@ interface Threshold {
   remediate: string;
 }
 
-const CATEGORIES: Record<CategoryKey, string> = {
+interface RiskStyle {
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+const CATEGORIES: { [K in CategoryKey]: string } = {
   flash:  "Flash Dependency & Architecture",
   vendor: "Vendor & Hardware Concentration",
   supply: "Procurement & Supply Chain Exposure",
@@ -35,7 +42,7 @@ const CATEGORIES: Record<CategoryKey, string> = {
   ai:     "AI & Growth Trajectory",
 };
 
-const CAT_SUBTITLES: Record<CategoryKey, string> = {
+const CAT_SUBTITLES: { [K in CategoryKey]: string } = {
   flash:  "How reliant is your environment on NVMe/flash?",
   vendor: "How exposed are you to a single vendor or platform?",
   supply: "How vulnerable is your buying cycle to market volatility?",
@@ -47,7 +54,7 @@ const questions: Question[] = [
   { category: "Flash Dependency & Architecture", text: "What percentage of your storage environment is all-flash NVMe?", answers: [{ label: "<25%", s: 1 }, { label: "25-50%", s: 2 }, { label: "50-75%", s: 3 }, { label: ">75%", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Do you have a mix of disk, hybrid, and flash tiers in production?", answers: [{ label: "All three", s: 1 }, { label: "Two tiers", s: 2 }, { label: "One + partial", s: 3 }, { label: "All-flash only", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Is your storage platform designed to run on mixed media (HDD + NVMe)?", answers: [{ label: "Yes, natively", s: 1 }, { label: "Partially", s: 2 }, { label: "Via workaround", s: 3 }, { label: "No", s: 4 }], key: "flash" },
-  { category: "Flash Dependency & Architecture", text: 'What % of your data is actively "hot" and truly performance-sensitive?', answers: [{ label: "<10%", s: 1 }, { label: "10-25%", s: 2 }, { label: "25-50%", s: 3 }, { label: ">50%", s: 4 }], key: "flash" },
+  { category: "Flash Dependency & Architecture", text: "What % of your data is actively hot and truly performance-sensitive?", answers: [{ label: "<10%", s: 1 }, { label: "10-25%", s: 2 }, { label: "25-50%", s: 3 }, { label: ">50%", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Are performance and capacity tightly coupled in your current architecture?", answers: [{ label: "Fully decoupled", s: 1 }, { label: "Mostly", s: 2 }, { label: "Somewhat", s: 3 }, { label: "Tightly coupled", s: 4 }], key: "flash" },
   { category: "Flash Dependency & Architecture", text: "Can you add HDD capacity without also adding NVMe?", answers: [{ label: "Yes, easily", s: 1 }, { label: "With effort", s: 2 }, { label: "Limited", s: 3 }, { label: "No", s: 4 }], key: "flash" },
   { category: "Vendor & Hardware Concentration", text: "How many storage hardware vendors do you actively use?", answers: [{ label: "4+", s: 1 }, { label: "3", s: 2 }, { label: "2", s: 3 }, { label: "1", s: 4 }], key: "vendor" },
@@ -73,13 +80,13 @@ const THRESHOLDS: Threshold[] = [
   { lo: 63, hi: 80, label: "Critical Risk", emoji: "🔴", color: "#7f1d1d", bg: "#fee2e2", border: "#dc2626", desc: "Highly exposed. Flash-heavy, single-vendor, no cloud escape valve. Supply chain disruption could stall projects or trigger emergency spending.", remediate: "Act now — immediate action required." },
 ];
 
-const catKeys = Object.keys(CATEGORIES) as CategoryKey[];
+const catKeys: CategoryKey[] = ["flash", "vendor", "supply", "cloud", "ai"];
 
 function getOverallRisk(score: number): Threshold {
   return THRESHOLDS.find(t => score >= t.lo && score <= t.hi) || THRESHOLDS[THRESHOLDS.length - 1];
 }
 
-function getCatRisk(score: number, max: number) {
+function getCatRisk(score: number, max: number): RiskStyle {
   const pct = score / max;
   if (pct <= 0.33) return { label: "Low Risk",    color: "#14532d", bg: "#dcfce7", border: "#16a34a" };
   if (pct <= 0.66) return { label: "Medium Risk", color: "#713f12", bg: "#fef9c3", border: "#ca8a04" };
@@ -87,37 +94,39 @@ function getCatRisk(score: number, max: number) {
 }
 
 function getCatIndex(category: string): number {
-  return catKeys.findIndex(k => CATEGORIES[k] === category);
+  return catKeys.findIndex((k: CategoryKey) => CATEGORIES[k] === category);
 }
 
 function downloadPDF(): void {
   window.print();
 }
 
-const ScoringHeader = () => (
-  <div style={{ background: "#fff", borderRadius: 12, padding: "20px 28px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", borderLeft: "4px solid #111" }}>
-    <p style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: "0 0 10px" }}>Scoring Model</p>
-    <p style={{ fontSize: 13, color: "#374151", margin: "0 0 10px", lineHeight: 1.6 }}>Each question is scored <strong>1–4</strong>, where:</p>
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
-        <span style={{ background: "#dcfce7", color: "#14532d", borderRadius: 4, padding: "1px 8px", fontWeight: 600 }}>1</span>
-        Low risk / well-positioned
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
-        <span style={{ background: "#fef9c3", color: "#713f12", borderRadius: 4, padding: "1px 8px", fontWeight: 600 }}>4</span>
-        High risk / highly exposed
-      </div>
-    </div>
-    <div style={{ display: "flex", gap: 20, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-      {(["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]) && [["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]].map(([val, lbl]) => (
-        <div key={lbl} style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#111" }}>{val}</div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{lbl}</div>
+function ScoringHeader() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: "20px 28px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", borderLeft: "4px solid #111" }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: "0 0 10px" }}>Scoring Model</p>
+      <p style={{ fontSize: 13, color: "#374151", margin: "0 0 10px", lineHeight: 1.6 }}>Each question is scored <strong>1-4</strong>, where:</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+          <span style={{ background: "#dcfce7", color: "#14532d", borderRadius: 4, padding: "1px 8px", fontWeight: 600 }}>1</span>
+          Low risk / well-positioned
         </div>
-      ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+          <span style={{ background: "#fef9c3", color: "#713f12", borderRadius: 4, padding: "1px 8px", fontWeight: 600 }}>4</span>
+          High risk / highly exposed
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 20, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+        {[["5", "Categories"], ["20", "Questions"], ["80", "Max Score"]].map(([val, lbl]) => (
+          <div key={lbl} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#111" }}>{val}</div>
+            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{lbl}</div>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
 export default function Page() {
   const [currentQ, setCurrentQ] = useState<number>(0);
@@ -125,29 +134,29 @@ export default function Page() {
   const [selected, setSelected] = useState<number | null>(null);
   const [done, setDone] = useState<boolean>(false);
 
-  const q = questions[currentQ];
-  const isLast = currentQ === questions.length - 1;
-  const progress = ((currentQ + 1) / questions.length) * 100;
-  const catIdx = getCatIndex(q.category);
+  const q: Question = questions[currentQ];
+  const isLast: boolean = currentQ === questions.length - 1;
+  const progress: number = ((currentQ + 1) / questions.length) * 100;
+  const catIdx: number = getCatIndex(q.category);
 
-  function handleNext() {
+  function handleNext(): void {
     if (selected === null) return;
     const newAnswers = [...answers, selected];
     if (isLast) { setAnswers(newAnswers); setDone(true); }
     else { setAnswers(newAnswers); setCurrentQ(currentQ + 1); setSelected(null); }
   }
 
-  function handleRestart() {
+  function handleRestart(): void {
     setCurrentQ(0); setAnswers([]); setSelected(null); setDone(false);
   }
 
   if (done) {
-    const totals: Record<CategoryKey, number> = { flash: 0, vendor: 0, supply: 0, cloud: 0, ai: 0 };
+    const totals: { [K in CategoryKey]: number } = { flash: 0, vendor: 0, supply: 0, cloud: 0, ai: 0 };
     answers.forEach((ai: number, qi: number) => {
       totals[questions[qi].key] += questions[qi].answers[ai].s;
     });
-    const totalScore = Object.values(totals).reduce((a, b) => a + b, 0);
-    const overall = getOverallRisk(totalScore);
+    const totalScore: number = Object.values(totals).reduce((a, b) => a + b, 0);
+    const overall: Threshold = getOverallRisk(totalScore);
 
     return (
       <div style={{ minHeight: "100vh", background: "#f9fafb", padding: 24 }}>
@@ -156,8 +165,8 @@ export default function Page() {
 
           {totalScore > 50 && (
             <div style={{ background: "#111", borderRadius: 12, padding: 24, marginBottom: 16 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 6px" }}>💬 Let&apos;s talk about your score</p>
-              <p style={{ fontSize: 13, color: "#d1d5db", margin: 0, lineHeight: 1.7 }}>You scored <strong style={{ color: "#fff" }}>{totalScore} out of 80</strong>. Organizations at this level often face real constraints when hardware availability shifts. This is a great conversation starter — let&apos;s walk through what this looks like in your environment.</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 6px" }}>Let&apos;s talk about your score</p>
+              <p style={{ fontSize: 13, color: "#d1d5db", margin: 0, lineHeight: 1.7 }}>You scored <strong style={{ color: "#fff" }}>{totalScore} out of 80</strong>. Organizations at this level often face real constraints when hardware availability shifts. Let&apos;s walk through what this looks like in your environment.</p>
             </div>
           )}
 
@@ -176,12 +185,12 @@ export default function Page() {
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 16px" }}>Score by Category</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {catKeys.map((key: CategoryKey, i: number) => {
-                const name = CATEGORIES[key];
-                const catMax = questions.filter((q: Question) => q.key === key).length * 4;
-                const score = totals[key];
-                const risk = getCatRisk(score, catMax);
-                const isPriority = key === "flash" || key === "vendor";
-                const isQuickWin = key === "cloud";
+                const name: string = CATEGORIES[key];
+                const catMax: number = questions.filter((q: Question) => q.key === key).length * 4;
+                const score: number = totals[key];
+                const risk: RiskStyle = getCatRisk(score, catMax);
+                const isPriority: boolean = key === "flash" || key === "vendor";
+                const isQuickWin: boolean = key === "cloud";
                 return (
                   <div key={key} style={{ padding: "14px 16px", borderRadius: 8, border: isPriority ? "1.5px solid #fca5a5" : isQuickWin ? "1.5px solid #86efac" : "1px solid #f3f4f6", background: isPriority ? "#fff7f7" : isQuickWin ? "#f0fdf4" : "#fafafa" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
@@ -189,11 +198,11 @@ export default function Page() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                           <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>{i + 1}.</span>
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{name}</span>
-                          {isPriority && <span style={{ fontSize: 10, fontWeight: 700, background: "#fee2e2", color: "#991b1b", borderRadius: 4, padding: "1px 6px" }}>⚠️ PRIORITY</span>}
-                          {isQuickWin && <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#166534", borderRadius: 4, padding: "1px 6px" }}>⚡ QUICK WIN</span>}
+                          {isPriority && <span style={{ fontSize: 10, fontWeight: 700, background: "#fee2e2", color: "#991b1b", borderRadius: 4, padding: "1px 6px" }}>PRIORITY</span>}
+                          {isQuickWin && <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#166534", borderRadius: 4, padding: "1px 6px" }}>QUICK WIN</span>}
                         </div>
                         {isPriority && <p style={{ fontSize: 11, color: "#991b1b", margin: 0 }}>Architectural lock-in is the hardest problem to solve quickly.</p>}
-                        {isQuickWin && <p style={{ fontSize: 11, color: "#166534", margin: 0 }}>Fastest lever most organizations can pull — prioritize even at moderate risk.</p>}
+                        {isQuickWin && <p style={{ fontSize: 11, color: "#166534", margin: 0 }}>Fastest lever most organizations can pull.</p>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 12 }}>
                         <span style={{ background: risk.bg, color: risk.color, border: `1px solid ${risk.border}`, borderRadius: 999, padding: "1px 10px", fontSize: 11, fontWeight: 600 }}>{risk.label}</span>
@@ -213,16 +222,16 @@ export default function Page() {
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 16px" }}>Risk Score Thresholds</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {THRESHOLDS.map((t: Threshold) => {
-                const active = totalScore >= t.lo && totalScore <= t.hi;
+                const active: boolean = totalScore >= t.lo && totalScore <= t.hi;
                 return (
                   <div key={t.lo} style={{ borderRadius: 8, border: `1px solid ${active ? t.border : "#f3f4f6"}`, background: active ? t.bg : "#fafafa", padding: "12px 16px", opacity: active ? 1 : 0.5 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 15 }}>{t.emoji}</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: t.color }}>{t.label}</span>
-                      <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>{t.lo}–{t.hi}</span>
+                      <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>{t.lo}-{t.hi}</span>
                     </div>
                     <p style={{ fontSize: 12, color: "#374151", margin: "0 0 6px", lineHeight: 1.6 }}>{t.desc}</p>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: t.color, margin: 0 }}>⏱ {t.remediate}</p>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: t.color, margin: 0 }}>Time to remediate: {t.remediate}</p>
                   </div>
                 );
               })}
@@ -232,17 +241,19 @@ export default function Page() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 20px" }}>Your Answers</p>
             {catKeys.map((key: CategoryKey) => {
-              const name = CATEGORIES[key];
-              const catQs = questions.map((q: Question, i: number) => ({ q, i })).filter(({ q }: { q: Question; i: number }) => q.key === key);
+              const name: string = CATEGORIES[key];
+              const catQs: { q: Question; i: number }[] = questions
+                .map((q: Question, i: number) => ({ q, i }))
+                .filter(({ q }: { q: Question; i: number }) => q.key === key);
               return (
                 <div key={key} style={{ marginBottom: 24 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px", paddingBottom: 6, borderBottom: "1px solid #f3f4f6" }}>{name}</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {catQs.map(({ q, i }: { q: Question; i: number }) => {
-                      const chosen = q.answers[answers[i]];
-                      const s = chosen.s;
-                      const sc = s === 1 ? "#16a34a" : s === 2 ? "#ca8a04" : s === 3 ? "#ea580c" : "#dc2626";
-                      const sb = s === 1 ? "#dcfce7" : s === 2 ? "#fef9c3" : s === 3 ? "#ffedd5" : "#fee2e2";
+                      const chosen: Answer = q.answers[answers[i]];
+                      const s: number = chosen.s;
+                      const sc: string = s === 1 ? "#16a34a" : s === 2 ? "#ca8a04" : s === 3 ? "#ea580c" : "#dc2626";
+                      const sb: string = s === 1 ? "#dcfce7" : s === 2 ? "#fef9c3" : s === 3 ? "#ffedd5" : "#fee2e2";
                       return (
                         <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #f3f4f6", gap: 12 }}>
                           <div style={{ flex: 1 }}>
@@ -262,10 +273,10 @@ export default function Page() {
 
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={handleRestart} style={{ flex: 1, padding: 13, borderRadius: 8, border: "1px solid #d1d5db", background: "#fff", fontSize: 15, fontWeight: 500, cursor: "pointer", color: "#374151" }}>
-              ↺ Retake
+              Retake
             </button>
             <button onClick={downloadPDF} style={{ flex: 1, padding: 13, borderRadius: 8, border: "none", background: "#111", fontSize: 15, fontWeight: 600, cursor: "pointer", color: "#fff" }}>
-              ⬇ Download PDF
+              Download PDF
             </button>
           </div>
 
@@ -281,7 +292,7 @@ export default function Page() {
         <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af", margin: "0 0 4px" }}>Category {catIdx + 1} of {catKeys.length}</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: "0 0 4px" }}>{q.category}</p>
-          {CAT_SUBTITLES[q.key] && <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>{CAT_SUBTITLES[q.key]}</p>}
+          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>{CAT_SUBTITLES[q.key]}</p>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Question {currentQ + 1} of {questions.length}</p>
             <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>{Math.round(progress)}%</p>
@@ -299,7 +310,7 @@ export default function Page() {
             ))}
           </div>
           <button onClick={handleNext} disabled={selected === null} style={{ width: "100%", padding: 13, borderRadius: 8, border: "none", background: selected === null ? "#e5e7eb" : "#111", color: selected === null ? "#9ca3af" : "#fff", fontSize: 15, fontWeight: 600, cursor: selected === null ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
-            {isLast ? "See my results →" : "Next →"}
+            {isLast ? "See my results" : "Next"}
           </button>
         </div>
       </div>
