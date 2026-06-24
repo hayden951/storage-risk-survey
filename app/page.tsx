@@ -67,7 +67,7 @@ function getCatRisk(score: number, max: number) {
 
 const catKeys = Object.keys(CATEGORIES);
 
-function getCatIndex(category) {
+function getCatIndex(category: string) {
   return catKeys.findIndex(k => CATEGORIES[k] === category);
 }
 
