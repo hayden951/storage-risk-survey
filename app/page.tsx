@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 
 const CATEGORIES = {
@@ -55,7 +54,7 @@ const TIPS = [
   { icon: "💬", text: 'For a webinar or sales context, frame scores as conversation starters: "If you scored above 50, let\'s talk about what that looks like in your environment."' },
 ];
 
-function getOverallRisk(score) {
+function getOverallRisk(score: number) {
   return THRESHOLDS.find(t => score >= t.lo && score <= t.hi) || THRESHOLDS[THRESHOLDS.length - 1];
 }
 
@@ -97,15 +96,15 @@ const ScoringHeader = () => (
   </div>
 );
 
-function downloadPDF() {
+function downloadPDF(): void {
   window.print();
 }
 
 export default function Survey() {
-  const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [done, setDone] = useState(false);
+  const [currentQ, setCurrentQ] = useState<number>(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [done, setDone] = useState<boolean>(false);
 
   const q = questions[currentQ];
   const isLast = currentQ === questions.length - 1;
